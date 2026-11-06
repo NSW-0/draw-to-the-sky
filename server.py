@@ -422,4 +422,8 @@ if __name__ == "__main__":
     if OPEN_BROWSER:
         import threading
         threading.Thread(target=open_when_ready, daemon=True).start()
-    server.run(sockets=[sock] if sock else None)
+    try:
+        server.run(sockets=[sock] if sock else None)
+    except KeyboardInterrupt:
+        pass   # Ctrl+C: uvicorn already shut down cleanly; don't print a traceback
+    print("  Stopped. Drawings are saved - start again any time.")
