@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connect a phone · Draw to the Sky</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { --ink: #0B1240; --brass: #E6B85C; --paper: #FFF7E8;
+          --latin: "Bahnschrift", "DIN Alternate", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; }
+  html, body { margin: 0; min-height: 100%; }
+  body { min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: var(--latin); color: var(--paper);
+         background: linear-gradient(rgba(0,0,0,.45), rgba(0,0,0,.65)), url("/static/space.jpg") center / cover fixed, #000; }
+  main { text-align: center; padding: 32px 20px; }
+  h1 { margin: 0 0 26px; font-size: clamp(28px, 4.2vw, 48px); font-weight: 600; letter-spacing: -0.01em; }
+  .plate { position: relative; width: min(64vh, 80vw, 520px); aspect-ratio: 1; margin: 0 auto; }
+  .plate svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .plate img { position: absolute; left: 50%; top: 50%; width: 56%; transform: translate(-50%, -50%);
+               background: var(--paper); border-radius: 14px; padding: 3%; box-sizing: border-box; }
+  .url { margin-top: 24px; font-size: clamp(22px, 3vw, 34px); color: var(--brass); letter-spacing: .02em; user-select: all; }
+  p { margin: 12px auto 0; max-width: 34em; font-size: 17px; line-height: 1.5; color: rgba(255,247,232,.78); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Scan to send your drawing</h1>
+  <div class="plate">
+    <svg id="ring" viewBox="0 0 200 200" aria-hidden="true"></svg>
+    <img src="/api/qr.svg" alt="QR code that opens the photo page">
+  </div>
+  <div class="url" id="url"></div>
+  <p>The phone must be on the same network as this laptop: the same Wi-Fi, a hotspot, or a USB cable. Or type the address above into the phone's browser.</p>
+  <p id="others"></p>
+</main>
+<script>
+  (function () {
+    const svg = document.getElementById("ring"), ns = "http://www.w3.org/2000/svg";
+    const add = (tag, attrs) => { const e = document.createElementNS(ns, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); svg.appendChild(e); };
+    add("circle", { cx: 100, cy: 100, r: 97, fill: "rgba(11,18,64,.55)", stroke: "#E6B85C", "stroke-width": 1.2 });
+    add("circle", { cx: 100, cy: 100, r: 82, fill: "none", stroke: "#E6B85C", "stroke-opacity": 0.4, "stroke-width": 0.6 });
+    for (let i = 0; i < 72; i++) {
+      const a = (i * 5 * Math.PI) / 180, long = i % 6 === 0, r1 = 96, r2 = long ? 86 : 91;
+      add("line", { x1: 100 + r1 * Math.cos(a), y1: 100 + r1 * Math.sin(a), x2: 100 + r2 * Math.cos(a), y2: 100 + r2 * Math.sin(a),
+                    stroke: "#E6B85C", "stroke-width": long ? 1.2 : 0.6, "stroke-opacity": long ? 1 : 0.65 });
+    }
+  })();
+  // refresh every few seconds: switching to a hotspot or USB cable updates the QR code by itself
+  let lastUrl = "";
+  async function refresh() {
+    try {
+      const i = await (await fetch("/api/info", { cache: "no-store" })).json();
+      const url = i.capture_url.replace(/^http:\/\//, "");
+      document.getElementById("url").textContent = url;
+      const others = i.ips.slice(1).map((ip) => `${ip}:${i.port}/capture`);
+      document.getElementById("others").textContent = others.length ? "Other addresses to try: " + others.join("  ·  ") : "";
+      if (url !== lastUrl) { document.querySelector(".plate img").src = "/api/qr.svg?u=" + encodeURIComponent(url); lastUrl = url; }
+    } catch (e) {}
+  }
+  refresh();
+  setInterval(refresh, 4000);
+</script>
+</body>
+</html>

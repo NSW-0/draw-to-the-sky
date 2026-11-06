@@ -1,0 +1,15 @@
+﻿# kids' drawings stay on the laptop only
+drawings/
+
+# pictures are not included in the repo (add your own, see README "Pictures")
+static/space.jpg
+static/phone_bg.jpg
+static/icon.ico
+
+# Windows shortcut with this laptop's paths
+*.lnk
+
+# generated files
+__pycache__/
+tools/test_images/
+tools/contact_sheet.png

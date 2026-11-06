@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#060607">
+<title>Draw to the Sky</title>
+<link rel="icon" href="data:,">
+<style>
+  /* ---- tokens: black, green, red ------------------------------------- */
+  :root {
+    --black: #060607;
+    --green: #3DFF6E;      /* go: take a picture, send */
+    --red: #FF2B3F;        /* delete */
+    --white: #F4F6F1;
+    --dim: rgba(244,246,241,.68);
+    --display: "Avenir Next Condensed", "Arial Narrow", "Roboto Condensed", "Bahnschrift", system-ui, sans-serif;
+    --text: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --cut: 14px;           /* slanted corners, like the shards in the art */
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { background: var(--black); }
+  body {
+    margin: 0; min-height: 100vh; min-height: 100dvh; color: var(--white); font-family: var(--text); font-size: 17px; line-height: 1.45;
+    background: linear-gradient(180deg, rgba(6,6,7,.15) 0%, rgba(6,6,7,.25) 45%, rgba(6,6,7,.92) 78%, var(--black) 100%),
+                url("/static/phone_bg.jpg") center top / cover fixed, var(--black);
+    padding: max(20px, env(safe-area-inset-top)) 20px max(22px, env(safe-area-inset-bottom));
+  }
+  body.dark { background: linear-gradient(rgba(6,6,7,.86), rgba(6,6,7,.94)), url("/static/phone_bg.jpg") center top / cover fixed, var(--black); }
+  button, input { font: inherit; color: inherit; }
+
+  .screen { display: none; max-width: 460px; margin: 0 auto; min-height: calc(100dvh - 44px); flex-direction: column; }
+  .screen.show { display: flex; }
+
+  h1 { margin: 4px 0 0; font-family: var(--display); font-weight: 800; font-size: 30px; line-height: 1.05; letter-spacing: -0.01em; }
+  .brand { font-size: 46px; transform: skewX(-8deg); transform-origin: left; text-shadow: 3px 3px 0 var(--red), 0 2px 18px rgba(0,0,0,.6); }
+
+  /* ---- buttons ---------------------------------------------------------- */
+  .btn { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; min-height: 64px; padding: 12px 22px;
+         border: 0; cursor: pointer; font-family: var(--display); font-size: 22px; font-weight: 800; letter-spacing: .01em;
+         clip-path: polygon(var(--cut) 0, 100% 0, calc(100% - var(--cut)) 100%, 0 100%); transition: transform .12s ease, filter .12s; }
+  .btn:active { transform: scale(.98); filter: brightness(1.1); }
+  .btn:focus-visible { outline: 3px solid var(--white); outline-offset: 3px; }
+  .btn:disabled { opacity: .45; }
+  .btn svg { width: 28px; height: 28px; flex: none; }
+  .go { background: var(--green); color: var(--black); min-height: 78px; font-size: 25px; }
+  .plain { background: rgba(244,246,241,.12); color: var(--white); box-shadow: inset 0 0 0 2px rgba(244,246,241,.55); }
+  .danger { background: rgba(255,43,63,.12); color: var(--red); box-shadow: inset 0 0 0 2px var(--red); min-height: 56px; font-size: 19px; }
+  .danger.solid { background: var(--red); color: var(--black); box-shadow: none; }
+  .red { background: var(--red); color: var(--black); min-height: 70px; }
+  .count { min-width: 30px; padding: 0 8px; border-radius: 999px; background: var(--black); color: var(--white); font-size: 16px; line-height: 28px; }
+  .link { background: none; border: 0; color: var(--dim); text-decoration: underline; cursor: pointer; padding: 12px; font-size: 16px; }
+
+  /* ---- home ------------------------------------------------------------- */
+  .home-actions { margin-top: auto; display: grid; gap: 12px; }
+  .tip { margin: 6px 0 0; font-size: 15px; color: var(--dim); text-align: center; text-wrap: balance; }
+  input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  label.btn { text-align: center; }
+  input[type=file]:focus-visible + label { outline: 3px solid var(--white); outline-offset: 3px; }
+
+  /* ---- preview ---------------------------------------------------------- */
+  .window { position: relative; margin: 16px 0 18px; min-height: 250px; flex: 1 1 auto; max-height: 60vh; overflow: hidden;
+            display: flex; align-items: center; justify-content: center; padding: 22px;
+            background: url("/static/space.jpg") center / cover, #000; box-shadow: inset 0 0 0 2px rgba(61,255,110,.45);
+            clip-path: polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px); }
+  .window img { max-width: 100%; max-height: 50vh; display: block; }
+  .busy { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.55); }
+  .busy.show { display: flex; }
+  .spinner { width: 52px; height: 52px; border-radius: 50%; border: 4px solid rgba(61,255,110,.2); border-top-color: var(--green); animation: spin .9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .slider { margin-bottom: 18px; }
+  .slider label { font-weight: 600; }
+  .slider .ends { display: flex; justify-content: space-between; font-size: 14px; color: var(--dim); }
+  input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 44px; margin: 2px 0; background: transparent; }
+  input[type=range]::-webkit-slider-runnable-track { height: 6px; background: linear-gradient(90deg, rgba(61,255,110,.25), var(--green)); }
+  input[type=range]::-moz-range-track { height: 6px; background: linear-gradient(90deg, rgba(61,255,110,.25), var(--green)); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 30px; height: 30px; margin-top: -12px; border-radius: 50%;
+      background: var(--white); border: 4px solid var(--green); box-shadow: 0 2px 10px rgba(0,0,0,.5); }
+  input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: var(--white); border: 4px solid var(--green); }
+  input[type=range]:focus-visible { outline: 2px solid var(--green); outline-offset: 4px; }
+
+  .actions { margin-top: auto; display: grid; gap: 12px; }
+
+  .error { display: none; margin: 4px 0 14px; padding: 12px 16px; background: rgba(255,43,63,.15); box-shadow: inset 3px 0 0 var(--red); }
+  .error.show { display: block; }
+
+  /* ---- sent ------------------------------------------------------------- */
+  .launch { height: 44vh; display: flex; align-items: center; justify-content: center; }
+  .launch img { max-width: 62%; max-height: 32vh; filter: drop-shadow(0 0 16px rgba(61,255,110,.75)); animation: rise 1.8s cubic-bezier(.3,0,.2,1) both; }
+  @keyframes rise { 0% { transform: translateY(40px); opacity: 1; } 70% { opacity: 1; } 100% { transform: translateY(-32vh) scale(.25); opacity: 0; } }
+  .waiting { margin: auto 0; text-align: center; }
+  .waiting .spinner { margin: 0 auto 22px; }
+
+  /* ---- gallery ---------------------------------------------------------- */
+  .bar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .back { display: flex; align-items: center; gap: 4px; min-height: 48px; padding: 0 14px 0 6px; border: 0; cursor: pointer;
+          background: rgba(244,246,241,.1); color: var(--white); font-weight: 600; clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%); }
+  .back svg { width: 24px; height: 24px; }
+  .bar h1 { font-size: 26px; flex: 1; }
+  .bar .n { color: var(--green); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-bottom: 12px; }
+  .tile { position: relative; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; padding: 14px;
+          background: rgba(20,22,26,.92); box-shadow: inset 0 0 0 1px rgba(61,255,110,.3);
+          clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px); }
+  .tile img { max-width: 100%; max-height: 100%; }
+  .tile .del { position: absolute; top: 6px; right: 6px; width: 44px; height: 44px; border-radius: 50%; border: 0; cursor: pointer;
+               display: flex; align-items: center; justify-content: center; background: var(--red); color: var(--black); }
+  .tile .del svg { width: 22px; height: 22px; }
+  .tile .when { position: absolute; left: 10px; bottom: 8px; font-size: 13px; color: var(--dim); }
+  .tile.going { opacity: .3; transition: opacity .3s; }
+  .empty { margin: auto 0; text-align: center; color: var(--dim); }
+  .empty p { margin: 0 0 18px; font-size: 18px; }
+  .gallery-foot { margin-top: auto; padding-top: 8px; }
+
+  /* ---- confirm sheet + toast ------------------------------------------------ */
+  .sheet-bg { position: fixed; inset: 0; display: none; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.6); z-index: 10; }
+  .sheet-bg.show { display: flex; }
+  .sheet { width: 100%; max-width: 500px; padding: 24px 20px max(20px, env(safe-area-inset-bottom)); background: #121317;
+           box-shadow: inset 0 3px 0 var(--red); animation: up .2s ease-out; }
+  @keyframes up { from { transform: translateY(30px); opacity: 0; } }
+  .sheet h2 { margin: 0 0 6px; font-family: var(--display); font-size: 26px; font-weight: 800; }
+  .sheet p { margin: 0 0 18px; color: var(--dim); }
+  .sheet .row { display: grid; gap: 10px; }
+  .sheet img { display: block; max-height: 120px; max-width: 60%; margin: 0 auto 14px; }
+  .sheet img[hidden], [hidden] { display: none !important; }
+  .toast { position: fixed; left: 50%; bottom: max(24px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 20;
+           padding: 12px 20px; background: #121317; box-shadow: inset 3px 0 0 var(--green); opacity: 0; transition: opacity .25s; pointer-events: none; white-space: nowrap; }
+  .toast.show { opacity: 1; }
+
+  @media (prefers-reduced-motion: reduce) { .launch img, .sheet { animation: none; } .spinner { animation-duration: 3s; } }
+</style>
+</head>
+<body>
+
+<!-- 1. home: three buttons -->
+<section class="screen show" id="s-home">
+  <h1 class="brand">Draw to<br>the Sky</h1>
+  <div class="home-actions">
+    <input id="file" type="file" accept="image/*" capture="environment">
+    <label class="btn go" for="file" id="takeBtn">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="4" y="12" width="40" height="28" rx="5" fill="none" stroke="currentColor" stroke-width="4"/><path d="M17 12l3-5h8l3 5" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><circle cx="24" cy="26" r="7.5" fill="none" stroke="currentColor" stroke-width="4"/></svg>
+      Take a picture
+    </label>
+    <button class="btn red" id="photosBtn">See the photos <span class="count" id="count">0</span></button>
+    <div class="error" id="err-start" role="alert"></div>
+  </div>
+</section>
+
+<!-- 2. cutting out -->
+<section class="screen" id="s-wait">
+  <div class="waiting"><div class="spinner"></div><div>Cutting out the drawing…</div></div>
+</section>
+
+<!-- 3. preview -->
+<section class="screen" id="s-preview">
+  <h1>Does it look right?</h1>
+  <div class="window">
+    <img id="preview" alt="Cut-out drawing">
+    <div class="busy" id="busy"><div class="spinner"></div></div>
+  </div>
+  <div class="error" id="err-preview" role="alert"></div>
+  <div class="slider">
+    <label for="sens">Sensitivity</label>
+    <input id="sens" type="range" min="0" max="100" step="5" value="50">
+    <div class="ends"><span>Less</span><span>More</span></div>
+  </div>
+  <div class="actions">
+    <button class="btn plain" id="retake">Retake</button>
+    <button class="btn go" id="send">Send to the sky</button>
+  </div>
+</section>
+
+<!-- 4. sent -->
+<section class="screen" id="s-done">
+  <div class="launch"><img id="sentImg" alt=""></div>
+  <h1>Sent! Look at the big screen</h1>
+  <div class="actions">
+    <button class="btn go" id="again">Take the next picture</button>
+    <button class="btn plain" id="homeBtn">Done</button>
+  </div>
+</section>
+
+<!-- 5. photos -->
+<section class="screen" id="s-gallery">
+  <div class="bar">
+    <button class="back" id="backBtn" aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Back</button>
+    <h1>Photos <span class="n" id="galleryCount"></span></h1>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" hidden>
+    <p>No photos yet. Take a picture of a drawing to start.</p>
+    <button class="btn go" id="emptyTake">Take a picture</button>
+  </div>
+  <div class="gallery-foot" id="galleryFoot"><button class="btn danger" id="clearBtn2">Delete all</button></div>
+</section>
+
+<!-- confirm sheet -->
+<div class="sheet-bg" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="sheet">
+    <img id="sheetImg" alt="" hidden>
+    <h2 id="sheetTitle"></h2>
+    <p id="sheetText"></p>
+    <div class="row">
+      <button class="btn danger solid" id="sheetYes"></button>
+      <button class="btn plain" id="sheetNo">Keep</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="/static/capture.js"></script>
+</body>
+</html>

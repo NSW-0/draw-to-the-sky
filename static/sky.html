@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Draw to the Sky</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { --ink: #0B1240; --ember: #E9825A; --paper: #FFF7E8; --dune: #060920;
+          --latin: "Bahnschrift", "DIN Alternate", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
+  body { font-family: var(--latin); color: var(--paper); user-select: none; }
+  body.idle { cursor: none; }
+  canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+
+  /* delete mode (press D) */
+  #admin { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); display: none; align-items: center; gap: 18px;
+           padding: 10px 12px 10px 22px; border-radius: 999px; background: rgba(6,9,32,.86);
+           box-shadow: inset 0 0 0 2px var(--ember); font-size: 17px; white-space: nowrap; }
+  body.admin #admin { display: flex; }
+  body.admin { cursor: crosshair; }
+  #admin .hint { color: rgba(255,247,232,.65); font-size: 15px; }
+  button { font: inherit; cursor: pointer; border: 0; border-radius: 999px; padding: 9px 18px; }
+  button:focus-visible { outline: 3px solid var(--paper); outline-offset: 2px; }
+  #clearBtn { background: var(--ember); color: var(--dune); font-weight: 600; }
+
+  #modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(6,9,32,.7); }
+  #modal.show { display: flex; }
+  #modal .box { width: 440px; padding: 28px 30px 24px; border-radius: 24px; background: var(--ink); box-shadow: inset 0 0 0 2px var(--ember); }
+  #modal h2 { margin: 0 0 8px; font-size: 24px; font-weight: 600; }
+  #modal p { margin: 0; font-size: 16px; line-height: 1.45; color: rgba(255,247,232,.78); }
+  #modal .row { display: flex; gap: 12px; justify-content: flex-end; margin-top: 22px; }
+  #modal .no { background: transparent; color: var(--paper); box-shadow: inset 0 0 0 2px rgba(255,247,232,.4); }
+  #modal .yes { background: var(--ember); color: var(--dune); font-weight: 600; }
+
+  #toast { position: fixed; left: 50%; top: 76px; transform: translateX(-50%); padding: 10px 20px; border-radius: 999px;
+           background: rgba(6,9,32,.86); font-size: 16px; opacity: 0; transition: opacity .3s; pointer-events: none; }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<canvas id="sky"></canvas>
+
+<div id="admin">
+  <span>Delete mode: click a drawing to remove it</span>
+  <span class="hint" id="count"></span>
+  <button id="clearBtn">Remove all…</button>
+  <span class="hint">Press D to finish</span>
+</div>
+
+<div id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="box">
+    <h2 id="modalTitle">Remove all drawings from the sky?</h2>
+    <p>They move to the drawings/_trash folder on this laptop, so you can bring them back later.</p>
+    <div class="row"><button class="no" id="noBtn">Keep them</button><button class="yes" id="yesBtn">Remove all</button></div>
+  </div>
+</div>
+<div id="toast" role="status"></div>
+
+<script src="/static/sky.js"></script>
+</body>
+</html>
